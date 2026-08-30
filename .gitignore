@@ -1,0 +1,33 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editor / OS files
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs and runtime
+*.log
+*.tmp
+*.temp
+
+# Build artifacts
+build/
+dist/
+*.spec
+
+# Local caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# PyQt runtime files
+*.db
+*.sqlite3
