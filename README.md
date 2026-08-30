@@ -56,9 +56,9 @@ python main_gui.py
 6. 导出 PNG 图纸或数量统计文件
 
 ## 效果展示
-![before](example\before.jpg)
+![before](example/before.jpg)
 
-![after](example\after.png)
+![after](example/after.png)
 
 ## 许可证
 本项目仅用于学习与个人创作用途。
