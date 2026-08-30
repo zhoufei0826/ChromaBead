@@ -17,11 +17,18 @@ ChromaBead/
 ├── bead_core.py         # 图纸渲染与图例绘制
 ├── color_processor.py   # 颜色处理、K-means 与 LAB 计算
 ├── mard221_data.py      # MARD221 色卡数据
-├── requirements.txt     # 依赖清单
-├── README.md            # 项目说明
-├── .gitignore           # Git 忽略规则
-├── app.log              # 运行日志（本地生成）
-└── .venv/               # 可选虚拟环境目录
+├── requirements.txt    
+├── README.md         
+├── .gitignore          
+├── .github
+|    ├── CONTRIBUTING.md
+|    └── ISSUE_TEMPLATE
+|        ├── bug_report.md
+|        └── feature_request.md
+├── example
+|    ├── after.png
+|    └── before.jpg
+└── LICENSE
 ```
 
 ## 运行环境
