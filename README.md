@@ -55,6 +55,10 @@ python main_gui.py
 5. 生成拼豆网格图纸与底部图例
 6. 导出 PNG 图纸或数量统计文件
 
+## 效果展示
+![before](before.jpg)
+
+![after](after.png)
 
 ## 许可证
 本项目仅用于学习与个人创作用途。
