@@ -16,9 +16,9 @@ from PyQt6.QtWidgets import (
     QPushButton, QLabel, QFileDialog, QSlider, QSpinBox, QMessageBox,
     QGroupBox, QScrollArea, QCheckBox
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QEvent
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QPixmap, QFont, QImage
-
+from PyQt6.QtCore import QSizeF, Qt, QThread, pyqtSignal, QEvent
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QPageSize, QPixmap, QFont, QImage, QPainter
+from PyQt6.QtPrintSupport import QPrinter, QPrintDialog
 from PIL import Image
 
 from color_processor import process_image_to_mard
@@ -93,7 +93,7 @@ class MainWindow(QMainWindow):
         base, text, hover = colors.get(palette, colors["primary"])
         button.setStyleSheet(
             f"QPushButton {{"
-            f"background: {base}; color: {text}; border: 1px solid {hover}; padding: 9px 16px; font-weight: 600; min-height: 36px; border-radius: 0px; }}"
+            f"background: {base}; color: {text}; border: 1px solid {hover}; padding: 6px 12px; font-weight: 600; min-height: 30px; border-radius: 0px; }}"
             f"QPushButton:hover {{ background: {hover}; color: {text}; }}"
             f"QPushButton:disabled {{ background: #e6e6e6; color: #8a8a8a; border-color: #d3d3d3; }}"
         )
@@ -167,7 +167,7 @@ class MainWindow(QMainWindow):
 
         load_group = QGroupBox("加载图片")
         load_layout = QHBoxLayout(load_group)
-        load_layout.setContentsMargins(16, 18, 16, 16)
+        load_layout.setContentsMargins(16, 12, 16, 12)
         load_layout.setSpacing(12)
 
         self.btn_open = QPushButton("打开图片")
@@ -185,8 +185,8 @@ class MainWindow(QMainWindow):
         self.img_label.setStyleSheet(
             "border: 1px dashed #b9b9b9; background: #f7f7f7; color: #505050; font-size: 13px; border-radius: 0px;"
         )
-        self.img_label.setMinimumHeight(200)
-        self.img_label.setScaledContents(True)
+        self.img_label.setMinimumHeight(150)
+        self.img_label.setScaledContents(False)
         self.setAcceptDrops(True)
         self.img_label.setAcceptDrops(True)
         self.img_label.dragEnterEvent = self.dragEnterEvent
@@ -245,31 +245,56 @@ class MainWindow(QMainWindow):
         left_layout.addWidget(param_group)
 
         output_group = QGroupBox("生成与保存")
-        output_layout = QHBoxLayout(output_group)
+        output_layout = QVBoxLayout(output_group)
         output_layout.setContentsMargins(16, 18, 16, 16)
-        output_layout.setSpacing(12)
+        output_layout.setSpacing(8)
 
+        row1 = QHBoxLayout()
         self.btn_generate = QPushButton("生成图纸")
         self.btn_generate.clicked.connect(self.generate_plan)
         self._apply_button_style(self.btn_generate, "success")
-        output_layout.addWidget(self.btn_generate)
+        row1.addWidget(self.btn_generate, 3)
 
         self.btn_reset = QPushButton("重置参数")
         self.btn_reset.clicked.connect(self.reset_parameters)
         self._apply_button_style(self.btn_reset, "warn")
-        output_layout.addWidget(self.btn_reset)
+        row1.addWidget(self.btn_reset, 1)
+        output_layout.addLayout(row1)
 
+        row2 = QHBoxLayout()
         self.btn_save_png = QPushButton("保存 PNG")
         self.btn_save_png.clicked.connect(self.save_png)
         self.btn_save_png.setEnabled(False)
         self._apply_button_style(self.btn_save_png, "primary")
-        output_layout.addWidget(self.btn_save_png)
+        row2.addWidget(self.btn_save_png, 1)
 
         self.btn_save_txt = QPushButton("保存颜色清单")
         self.btn_save_txt.clicked.connect(self.save_txt)
         self.btn_save_txt.setEnabled(False)
         self._apply_button_style(self.btn_save_txt, "secondary")
-        output_layout.addWidget(self.btn_save_txt)
+        row2.addWidget(self.btn_save_txt, 1)
+        output_layout.addLayout(row2)
+
+        row3 = QHBoxLayout()
+        self.btn_export_pdf = QPushButton("导出 PDF")
+        self.btn_export_pdf.clicked.connect(self.export_pdf)
+        self.btn_export_pdf.setEnabled(False)
+        self._apply_button_style(self.btn_export_pdf, "primary")
+        row3.addWidget(self.btn_export_pdf)
+
+        self.btn_export_svg = QPushButton("导出 SVG")
+        self.btn_export_svg.clicked.connect(self.export_svg)
+        self.btn_export_svg.setEnabled(False)
+        self._apply_button_style(self.btn_export_svg, "primary")
+        row3.addWidget(self.btn_export_svg)
+
+        self.btn_print = QPushButton("打印")
+        self.btn_print.clicked.connect(self.print_plan)
+        self.btn_print.setEnabled(False)
+        self._apply_button_style(self.btn_print, "secondary")
+        row3.addWidget(self.btn_print)
+        output_layout.addLayout(row3)
+
         left_layout.addWidget(output_group)
 
         content_layout.addWidget(left_panel, 1)
@@ -396,9 +421,13 @@ class MainWindow(QMainWindow):
         self.img_label.clear()
         self.img_label.setText("拖拽图片到此处")
         self.preview_label.clear()
+        self.preview_label.setStyleSheet("background: #ffffff; border: none;")
         self.preview_status.setText("等待生成")
         self.btn_save_png.setEnabled(False)
         self.btn_save_txt.setEnabled(False)
+        self.btn_export_pdf.setEnabled(False)
+        self.btn_export_svg.setEnabled(False)
+        self.btn_print.setEnabled(False)
         self.statusBar().showMessage("已清除")
         gc.collect()
 
@@ -532,10 +561,14 @@ class MainWindow(QMainWindow):
     def on_generate_finished(self, grid, counts):
         self.current_grid = grid
         self.current_counts = counts
+        self.preview_label.setStyleSheet("background: #ffffff; border: 1px solid #d9d9d9; min-height: 420px; margin: 0px;")
         self._refresh_preview()
         self.preview_status.setText(f"已生成：{self.grid_width} * {self.grid_height} 格")
         self.btn_save_png.setEnabled(True)
         self.btn_save_txt.setEnabled(True)
+        self.btn_export_pdf.setEnabled(True)
+        self.btn_export_svg.setEnabled(True)
+        self.btn_print.setEnabled(True)
         self.btn_generate.setEnabled(True)
         self.statusBar().showMessage("图纸生成完成！")
         gc.collect()
@@ -624,6 +657,84 @@ class MainWindow(QMainWindow):
                     return True
 
         return super().eventFilter(obj, event)
+
+    def export_pdf(self):
+        """导出为 PDF 文件（使用 QPrinter）"""
+        if self.current_grid is None or self.current_counts is None:
+            return
+        # 获取保存路径
+        path, _ = QFileDialog.getSaveFileName(
+            self, "导出 PDF 图纸", "", "PDF Files (*.pdf)"
+        )
+        if not path:
+            return
+
+        # 生成图纸（使用较大分辨率）
+        plan_img = draw_bead_plan(self.current_grid, self.current_counts, cell_size=25)
+        qimg = pil_to_qimage(plan_img)
+        pix = QPixmap.fromImage(qimg)
+
+        # 设置打印机
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+        printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
+        printer.setOutputFileName(path)
+        # 设置页面大小为图纸大小（以点为单位，1/72英寸）
+        # 将像素转换为点（假设图像 DPI=96，打印机默认 72dpi，但我们可以直接设置物理尺寸）
+        # 更可靠：设置页面大小为图片尺寸（72dpi）
+        dpi = 72
+        width_pts = pix.width() * (dpi / 96)  # 因为 QPixmap 以 96dpi 存储
+        height_pts = pix.height() * (dpi / 96)
+        printer.setPageSize(QPrinter.PageSize.Custom)
+        printer.setPageSizeMM(QPageSize(QSizeF(width_pts/72, height_pts/72), QPageSize.Unit.Inch))
+
+        painter = QPainter(printer)
+        # 绘制图像，缩放至页面
+        rect = painter.viewport()
+        # 保持比例填充
+        scaled_pix = pix.scaled(rect.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        painter.drawPixmap(0, 0, scaled_pix)
+        painter.end()
+        self.statusBar().showMessage(f"PDF 已导出: {path}")
+
+    def export_svg(self):
+        """导出为 SVG 矢量图"""
+        if self.current_grid is None or self.current_counts is None:
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self, "导出 SVG 图纸", "", "SVG Files (*.svg)"
+        )
+        if not path:
+            return
+        try:
+            from bead_core import draw_bead_plan_svg
+            dwg = draw_bead_plan_svg(self.current_grid, self.current_counts, cell_size=25)
+            dwg.saveas(path)
+            self.statusBar().showMessage(f"SVG 已导出: {path}")
+        except Exception as e:
+            QMessageBox.critical(self, "导出失败", f"导出 SVG 时出错：{e}")
+
+    def print_plan(self):
+        """调用系统打印对话框打印图纸"""
+        if self.current_grid is None or self.current_counts is None:
+            return
+        # 生成图纸
+        plan_img = draw_bead_plan(self.current_grid, self.current_counts, cell_size=25)
+        qimg = pil_to_qimage(plan_img)
+        pix = QPixmap.fromImage(qimg)
+
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+        dialog = QPrintDialog(printer, self)
+        if dialog.exec() != QPrintDialog.DialogCode.Accepted:
+            return
+
+        painter = QPainter(printer)
+        rect = painter.viewport()
+        # 缩放至页面，保持比例
+        scaled_pix = pix.scaled(rect.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        painter.drawPixmap(0, 0, scaled_pix)
+        painter.end()
+        self.statusBar().showMessage("打印完成")
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     font = QFont("SimSun", 9)
