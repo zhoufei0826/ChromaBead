@@ -6,18 +6,15 @@
 - 外围编号与坐标边框
 - 底部颜色图例与数量统计
 """
-
 from PIL import Image, ImageDraw, ImageFont
 import os
 import svgwrite
-
 from mard221_data import MARD221_FULL
 
 MARD221_COLORS = [item["rgb"] for item in MARD221_FULL]
 MARD221_NAMES = [item["id"] for item in MARD221_FULL]
 
-
-def draw_bead_plan(grid, color_counts, cell_size=30, legend_cols=None,highlight_idx=None):
+def draw_bead_plan(grid, color_counts, cell_size=30, legend_cols=None,highlight_idx=None,solid=False):
     """
     绘制拼豆图纸，包含：
     - 内部颜色网格
@@ -26,10 +23,28 @@ def draw_bead_plan(grid, color_counts, cell_size=30, legend_cols=None,highlight_
     - 底部图例（颜色块 + 色号 + 数量）
     """
     h, w = grid.shape
-    if h*w>20000:
-        cell_size=min(cell_size,15)
-    elif h*w>10000:
-        cell_size=min(cell_size,20)
+
+    if solid:
+        # 只绘制内部色块，无边框、无图例、无网格线、无编号、无色号文字
+        grid_width = w * cell_size
+        grid_height = h * cell_size
+        img = Image.new('RGB', (grid_width, grid_height), color='white')
+        draw = ImageDraw.Draw(img)
+
+        for y in range(h):
+            for x in range(w):
+                idx = grid[y, x]
+                left = x * cell_size
+                top = y * cell_size
+                right = left + cell_size
+                bottom = top + cell_size
+                if idx == -1:
+                    draw.rectangle([left, top, right, bottom], fill='white')
+                else:
+                    color = tuple(MARD221_COLORS[idx])
+                    draw.rectangle([left, top, right, bottom], fill=color)
+        return img
+
     # 总网格数（包含白色边框）
     total_w_cells = w + 2
     total_h_cells = h + 2
@@ -77,6 +92,11 @@ def draw_bead_plan(grid, color_counts, cell_size=30, legend_cols=None,highlight_
             top = (y + 1) * cell_size
             right = left + cell_size
             bottom = top + cell_size
+
+            if idx==-1:
+                draw.rectangle([left, top, right, bottom], fill='white')
+                continue
+
             draw.rectangle([left, top, right, bottom], fill=color)
 
             if highlight_idx is not None and idx == highlight_idx:
@@ -159,24 +179,34 @@ def draw_bead_plan(grid, color_counts, cell_size=30, legend_cols=None,highlight_
         if x_idx in x_pos_10:
             continue  # 10格的位置由粗线绘制
         x = x_idx * cell_size
-        draw.line([(x, 0), (x, grid_height)], fill=(200, 200, 200), width=1)
+        draw.line([(x, 0), (x, grid_height)], fill=(120, 120, 120), width=2)
 
     # 细横线（5格）
     for y_idx in y_pos_5:
         if y_idx in y_pos_10:
             continue
         y = y_idx * cell_size
-        draw.line([(0, y), (grid_width, y)], fill=(200, 200, 200), width=1)
+        draw.line([(0, y), (grid_width, y)], fill=(120, 120, 120), width=2)
 
     # 粗竖线（10格）
     for x_idx in x_pos_10:
         x = x_idx * cell_size
-        draw.line([(x, 0), (x, grid_height)], fill=(120, 120, 120), width=2)
+        draw.line([(x, 0), (x, grid_height)], fill=(120, 120, 120), width=3)
     
     # 粗横线（10格）
     for y_idx in y_pos_10:
         y = y_idx * cell_size
-        draw.line([(0, y), (grid_width, y)], fill=(120, 120, 120), width=2)
+        draw.line([(0, y), (grid_width, y)], fill=(120, 120, 120), width=3)
+
+    # 小格线
+    light_color=(120,120,120)
+    for col in range(1, w):  
+        x_pos = (col + 1) * cell_size  
+        draw.line([(x_pos, cell_size), (x_pos, grid_height - cell_size)], fill=light_color, width=1)
+    # 横线
+    for row in range(1, h):
+        y_pos = (row + 1) * cell_size
+        draw.line([(cell_size, y_pos), (grid_width - cell_size, y_pos)], fill=light_color, width=1)
 
     # ---------- 绘制四周数数编号 ----------
     # 上边编号（行0，列1~w）

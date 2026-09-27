@@ -32,3 +32,6 @@ dist/
 # PyQt runtime files
 *.db
 *.sqlite3
+
+dsp.md
+plusplusplus.md
