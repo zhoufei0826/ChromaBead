@@ -15,10 +15,11 @@ ChromaBead 是一个用于将普通图片转换为拼豆图纸的桌面工具。
 ## 项目结构
 ```text
 ChromaBead/
-├── main_gui.py          # GUI 主入口
-├── bead_core.py         # 图纸渲染与图例绘制
-├── color_processor.py   # 颜色处理、K-means 与 LAB 计算
-├── mard221_data.py      # MARD221 色卡数据
+├── main_gui.py
+├── bead_core.py
+├── bead_editor.py
+├── color_processor.py
+├── mard221_data.py
 ├── requirements.txt    
 ├── README.md         
 ├── .gitignore          
