@@ -68,7 +68,7 @@ class GenerateThread(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("ChromaBead v1.0.1")
+        self.setWindowTitle("ChromaBead v1.2.0")
         self.setMinimumSize(1100, 780)
         self.resize(1350, 900)
 
